@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>심플 체중 기록기</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+    --primary-color: #7c3aed;
+    --primary-hover: #6d28d9;
+    --bg-color: linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%);
+    --card-bg: #ffffff;
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --danger: #ef4444;
+    --success: #10b981;
+    --border: #e5e7eb;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Pretendard', sans-serif;
+}
+
+body {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #ede9fe 0%, #ddd6fe 100%);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px 0;
+}
+
+.container {
+    width: 100%;
+    max-width: 390px;
+    min-height: 100vh;
+    padding: 20px 16px 32px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding-top: 8px;
+}
+
+h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #5b21b6;
+    margin-bottom: 0.35rem;
+}
+
+header p {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+.card {
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.12);
+    margin-bottom: 1rem;
+}
+
+.input-group {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+label {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 0.45rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+input {
+    width: 100%;
+    padding: 0.95rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fafafa;
+}
+
+input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
+}
+
+button.btn-save {
+    width: 100%;
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 1rem;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+button.btn-save:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
+.chart-container {
+    height: 240px;
+    margin-bottom: 1rem;
+}
+
+.record-list {
+    list-style: none;
+}
+
+.record-item {
+    background: var(--card-bg);
+    padding: 1rem 1rem;
+    border-radius: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.record-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.record-date {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.record-weight {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.record-diff {
+    font-size: 0.85rem;
+    margin-left: 8px;
+}
+
+.diff-up { color: var(--danger); }
+.diff-down { color: var(--success); }
+.diff-same { color: var(--text-muted); }
+
+.btn-delete {
+    background: #f5f3ff;
+    border: none;
+    color: #7c3aed;
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    font-size: 1.2rem;
+}
+
+.btn-delete:hover {
+    background: #ede9fe;
+}
+
+.empty-msg {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2rem 1rem;
+    font-size: 0.95rem;
+}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>체중 기록 시스템</h1>
+        <p>매일 체중을 간편하게 기록해보세요</p>
+    </header>
+
+    <!-- 입력 섹션 -->
+    <div class="card">
+        <div class="input-group">
+            <div>
+                <label for="date">날짜</label>
+                <input type="date" id="date">
+            </div>
+            <div>
+                <label for="weight">체중 (kg)</label>
+                <input type="number" id="weight" step="0.1" placeholder="00.0">
+            </div>
+            <button class="btn-save" onclick="addRecord()">기록 저장</button>
+        </div>
+    </div>
+
+    <!-- 그래프 섹션 -->
+    <div class="card chart-container">
+        <canvas id="weightChart"></canvas>
+    </div>
+
+    <!-- 기록 리스트 섹션 -->
+    <div id="recordContainer">
+        <ul class="record-list" id="recordList"></ul>
+    </div>
+</div>
+
+<script>
+    let records = JSON.parse(localStorage.getItem('weightRecords')) || [];
+    let weightChart = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('date').value = new Date().toISOString().substring(0, 10);
+        updateUI();
+    });
+
+    function addRecord() {
+        const dateInput = document.getElementById('date');
+        const weightInput = document.getElementById('weight');
+
+        if (!dateInput.value || !weightInput.value) {
+            alert('날짜와 체중을 모두 입력해주세요.');
+            return;
+        }
+
+        const newRecord = {
+            id: Date.now(),
+            date: dateInput.value,
+            weight: parseFloat(weightInput.value)
+        };
+
+        records.push(newRecord);
+        records.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        saveData();
+        updateUI();
+
+        weightInput.value = '';
+    }
+
+    function deleteRecord(id) {
+        if (confirm('이 기록을 삭제하시겠습니까?')) {
+            records = records.filter(r => r.id !== id);
+            saveData();
+            updateUI();
+        }
+    }
+
+    function saveData() {
+        localStorage.setItem('weightRecords', JSON.stringify(records));
+    }
+
+    function updateUI() {
+        renderList();
+        renderChart();
+    }
+
+    function renderList() {
+        const listEl = document.getElementById('recordList');
+        listEl.innerHTML = '';
+
+        if (records.length === 0) {
+            listEl.innerHTML = '<div class="empty-msg">기록이 없습니다. 첫 기록을 남겨보세요!</div>';
+            return;
+        }
+
+        const displayRecords = [...records].reverse();
+
+        displayRecords.forEach((record) => {
+            const originalIndex = records.findIndex(r => r.id === record.id);
+            let diffHtml = '';
+
+            if (originalIndex > 0) {
+                const prevWeight = records[originalIndex - 1].weight;
+                const diff = (record.weight - prevWeight).toFixed(1);
+
+                if (diff > 0) {
+                    diffHtml = `<span class="record-diff diff-up">▲ ${diff}kg</span>`;
+                } else if (diff < 0) {
+                    diffHtml = `<span class="record-diff diff-down">▼ ${Math.abs(diff)}kg</span>`;
+                } else {
+                    diffHtml = `<span class="record-diff diff-same">-</span>`;
+                }
+            }
+
+            const li = document.createElement('li');
+            li.className = 'record-item';
+            li.innerHTML = `
+                <div class="record-info">
+                    <span class="record-date">${record.date}</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="record-weight">${record.weight} kg</span>
+                        ${diffHtml}
+                    </div>
+                </div>
+                <button class="btn-delete" onclick="deleteRecord(${record.id})">×</button>
+            `;
+            listEl.appendChild(li);
+        });
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('weightChart').getContext('2d');
+
+        if (weightChart) {
+            weightChart.destroy();
+        }
+
+        const labels = records.map(r => r.date.slice(5));
+        const data = records.map(r => r.weight);
+
+        weightChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '체중 추이 (kg)',
+                    data: data,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointBackgroundColor: '#4f46e5'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: { color: '#f3f4f6' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+</script>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAiXvJ_ZKk5j7Qb2-EBz7Sqyg1eMHX9YO0",
+    authDomain: "project-4933191152664559575.firebaseapp.com",
+    projectId: "project-4933191152664559575",
+    storageBucket: "project-4933191152664559575.firebasestorage.app",
+    messagingSenderId: "212530951592",
+    appId: "1:212530951592:web:8baeca189f446fac39d99d",
+    measurementId: "G-D390BBVCLG"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  console.log("Firebase connected:", app);
+  console.log("Firestore connected:", db);
+</script>
+
+</body>
+</html>
